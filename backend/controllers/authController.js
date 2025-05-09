@@ -20,7 +20,6 @@ const checkStatus = async (req, res) => {
 
 const registerController = async (req, res) => {
   const user = req.body;
-  console.log(user);
   try {
     if (!user.email || !user.username || !user.password || !user.role) {
       return res.status(400).json({
@@ -32,9 +31,7 @@ const registerController = async (req, res) => {
         message: 'Invalid role'
       });
     }
-    console.log('1');
     const existingUser = await User.findOne({ where: { email: user.email.toLowerCase() } });
-    console.log('2');
     if (existingUser) {
       return res.status(400).json({
         message: 'User already exists'
@@ -42,7 +39,6 @@ const registerController = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(user.password, 10);
-    console.log('3');
     const newUser = await User.create({
       email: user.email.toLowerCase(),
       username: user.username,
@@ -50,14 +46,12 @@ const registerController = async (req, res) => {
       role: user.role,
       isVerified: false
     });
-    console.log('4');
     const code = generateSecurityCode();
     await UserSecurity.create({
       user_id: newUser.id,
       code: code,
       updatedAt: new Date()
     });
-    console.log('5');
     sendSecurityCodeEmail(user.email.toLowerCase(), code);
 
     return res.status(201).json({
@@ -189,7 +183,7 @@ const verifySecurityCodeController = async (req, res) => {
     }
 
     const user_id = userRecord.id;
-    const securityRecord = await UserSecurity.findOne({ where: { user_id } });
+    const securityRecord = await UserSecurity.findOne({ where: { user_id: String(user_id) } });
     if (!securityRecord) {
       return res.status(404).json({
         message: 'Security code not found'
