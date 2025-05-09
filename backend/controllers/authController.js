@@ -1,6 +1,10 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { User, UserSecurity, Freelancer, Employer } = require('../models'); // Sequelize models
+const { 
+    Freelancer, 
+    Employer, 
+    UserSecurity 
+} = require('../models'); 
 const { sendSecurityCodeEmail } = require('../utils/sendMail');
 const bcrypt = require('bcryptjs');
 const {
@@ -19,46 +23,63 @@ const checkStatus = async (req, res) => {
 }
 
 const registerController = async (req, res) => {
-  const user = req.body;
+  const { email, username, password, role } = req.body;
+  const lowerEmail = email.toLowerCase();
   try {
-    if (!user.email || !user.username || !user.password || !user.role) {
+    if (!email || !username || !password || !role) {
       return res.status(400).json({
         message: 'All fields are required'
       });
     }
-    if (user.role !== 'freelancer' && user.role !== 'employer') {
+    if (role !== 'freelancer' && role !== 'employer') {
       return res.status(400).json({
         message: 'Invalid role'
       });
     }
-    const existingUser = await User.findOne({ where: { email: user.email.toLowerCase() } });
-    if (existingUser) {
+    let existingRecord;
+    if (role === 'freelancer') {
+      existingRecord = await Freelancer.findOne({ where: { email: lowerEmail } });
+    } else {
+      existingRecord = await Employer.findOne({ where: { email: lowerEmail } });
+    }
+    if (existingRecord) {
       return res.status(400).json({
         message: 'User already exists'
       });
     }
 
-    const hashedPassword = await bcrypt.hash(user.password, 10);
-    const newUser = await User.create({
-      email: user.email.toLowerCase(),
-      username: user.username,
-      password: hashedPassword,
-      role: user.role,
-      isVerified: false
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    let newRecord;
+    if (role === 'freelancer') {
+      newRecord = await Freelancer.create({
+        email: lowerEmail,
+        username,
+        password: hashedPassword,
+        isVerified: false,
+      });
+    } else {
+      newRecord = await Employer.create({
+        email: lowerEmail,
+        username,
+        password: hashedPassword,
+        isVerified: false,
+      });
+    }
+
     const code = generateSecurityCode();
     await UserSecurity.create({
-      user_id: newUser.id,
+      user_id: newRecord.id,
       code: code,
       updatedAt: new Date()
     });
-    sendSecurityCodeEmail(user.email.toLowerCase(), code);
+    sendSecurityCodeEmail(lowerEmail, code);
 
     return res.status(201).json({
       message: 'Verification code sent to your email. Please verify to complete sign up',
-      user: newUser
+      user: newRecord
     });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Internal server error'
     });
@@ -66,31 +87,36 @@ const registerController = async (req, res) => {
 }
 
 const loginController = async (req, res) => {
-  const user = req.body;
+  const { email, password } = req.body;
+  const lowerEmail = email.toLowerCase();
   try {
-    const checkUser = await User.findOne({ where: { email: user.email.toLowerCase() } });
-    if (!checkUser) {
+    let record = await Freelancer.findOne({ where: { email: lowerEmail } });
+    let role = 'freelancer';
+    if (!record) {
+      record = await Employer.findOne({ where: { email: lowerEmail } });
+      role = 'employer';
+    }
+    if (!record) {
       return res.status(404).json({
         message: 'User not found'
       });
     }
 
-    const isPasswordValid = await bcrypt.compare(user.password, checkUser.password);
+    const isPasswordValid = await bcrypt.compare(password, record.password);
     if (!isPasswordValid) {
       return res.status(401).json({
         message: 'Invalid password'
       });
     }
 
-    const isVerified = checkUser.isVerified;
-    if (!isVerified) {
+    if (!record.isVerified) {
       return res.status(401).json({
         message: 'User not verified'
       });
     }
 
-    const accesstoken = generateAccessToken(checkUser.id);
-    const refreshtoken = generateRefreshToken(checkUser.id);
+    const accesstoken = generateAccessToken(record.id);
+    const refreshtoken = generateRefreshToken(record.id);
 
     res.cookie('accesstoken', accesstoken, {
       httpOnly: true,
@@ -105,9 +131,10 @@ const loginController = async (req, res) => {
 
     return res.status(201).json({
       message: 'User logged in successfully',
-      user: checkUser
+      user: record
     });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Failed login'
     });
@@ -130,6 +157,7 @@ const logoutController = async (req, res) => {
       message: 'User logged out successfully'
     });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Failed to logout'
     });
@@ -138,21 +166,22 @@ const logoutController = async (req, res) => {
 
 const generateSecurityCodeController = async (req, res) => {
   const { email } = req.body;
+  const lowerEmail = email.toLowerCase();
   try {
-    const user = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (!user) {
+    let record = await Freelancer.findOne({ where: { email: lowerEmail } });
+    if (!record) record = await Employer.findOne({ where: { email: lowerEmail } });
+    if (!record) {
       return res.status(404).json({
         message: 'User not found'
       });
     }
 
-    const user_id = user.id;
     const code = generateSecurityCode();
 
-    const userSecurityRecord = await UserSecurity.findOne({ where: { user_id } });
+    const userSecurityRecord = await UserSecurity.findOne({ where: { user_id: record.id } });
     if (!userSecurityRecord) {
       await UserSecurity.create({
-        user_id: user_id,
+        user_id: record.id,
         code: code
       });
     } else {
@@ -161,32 +190,34 @@ const generateSecurityCodeController = async (req, res) => {
       await userSecurityRecord.save();
     }
 
-    sendSecurityCodeEmail(email, code);
+    sendSecurityCodeEmail(lowerEmail, code);
     return res.status(200).json({
       message: 'Security code created and mailed successfully'
     });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Failed to generate security code'
     });
   }
 }
 
-const verifySecurityCodeController = async (req, res) => {
+const verifyRegisterSecurityCodeController = async (req, res) => {
   const { email, code } = req.body;
+  const lowerEmail = email.toLowerCase();
   try {
-    const userRecord = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (!userRecord) {
+    let record = await Freelancer.findOne({ where: { email: lowerEmail } });
+    if (!record) record = await Employer.findOne({ where: { email: lowerEmail } });
+    if (!record) {
       return res.status(404).json({
-        message: 'User not found'
+        message: "User not found"
       });
     }
 
-    const user_id = userRecord.id;
-    const securityRecord = await UserSecurity.findOne({ where: { user_id: String(user_id) } });
+    const securityRecord = await UserSecurity.findOne({ where: { user_id: record.id } });
     if (!securityRecord) {
       return res.status(404).json({
-        message: 'Security code not found'
+        message: "Security code not found"
       });
     }
 
@@ -198,52 +229,62 @@ const verifySecurityCodeController = async (req, res) => {
       });
     }
 
-    const security_code = securityRecord.code;
-    if (security_code === code) {
-      // Mark the user as verified
-      userRecord.isVerified = true;
-      await userRecord.save();
-
-      // Create freelancer or employer record based on user role
-      if (userRecord.role === 'freelancer') {
-        await Freelancer.create({ user_id: userRecord.id });
-      } else if (userRecord.role === 'employer') {
-        await Employer.create({ user_id: userRecord.id });
-      }
-
-      return res.status(200).json({
-        message: 'Security code verified and user verified successfully'
-      });
-    } else {
+    if (securityRecord.code !== code) {
       return res.status(400).json({
-        message: 'Invalid security code'
+        message: "Invalid security code"
       });
     }
+
+
+    record.isVerified = true;
+    await record.save();
+
+    const accesstoken = generateAccessToken(record.id);
+    const refreshtoken = generateRefreshToken(record.id);
+
+    res.cookie('accesstoken', accesstoken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none'
+    });
+    res.cookie('refreshtoken', refreshtoken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none'
+    });
+
+    return res.status(200).json({
+      message: 'User verified and signed in successfully'
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      message: 'Failed to verify security code'
+      message: 'Failed to verify security code for sign up'
     });
   }
 }
+
 const resetPasswordController = async (req, res) => {
   const { email, password } = req.body;
+  const lowerEmail = email.toLowerCase();
   try {
-    const userRecord = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (!userRecord) {
+    let record = await Freelancer.findOne({ where: { email: lowerEmail } });
+    if (!record) record = await Employer.findOne({ where: { email: lowerEmail } });
+    if (!record) {
       return res.status(404).json({
         message: 'User not found'
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    userRecord.password = hashedPassword;
-    await userRecord.save();
+    record.password = hashedPassword;
+    await record.save();
 
     return res.status(200).json({
       message: 'Password reset successfully'
     });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Failed to reset password'
     });
@@ -285,65 +326,9 @@ const getNewAccessTokenController = async (req, res) => {
       message: 'Access token refreshed successfully'
     });
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Failed to get new access token'
-    });
-  }
-}
-
-const verifyRegisterSecurityCodeController = async (req, res) => {
-  const { email, code } = req.body;
-  try {
-    const user = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found"
-      });
-    }
-
-    if (user.isVerified) {
-      return res.status(400).json({
-        message: "User already verified"
-      });
-    }
-
-    const user_id = user.id;
-    const securityRecord = await UserSecurity.findOne({ where: { user_id } });
-    if (!securityRecord) {
-      return res.status(404).json({
-        message: "Security code not found"
-      });
-    }
-
-    if (securityRecord.code !== code) {
-      return res.status(400).json({
-        message: "Invalid security code"
-      });
-    }
-
-    user.isVerified = true;
-    await user.save();
-
-    const accesstoken = generateAccessToken(user.id);
-    const refreshtoken = generateRefreshToken(user.id);
-
-    res.cookie('accesstoken', accesstoken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none'
-    });
-    res.cookie('refreshtoken', refreshtoken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none'
-    });
-
-    return res.status(200).json({
-      message: 'User verified and signed in successfully'
-    });
-  } catch (err) {
-    return res.status(500).json({
-      message: 'Failed to verify security code for sign up'
     });
   }
 }
@@ -354,9 +339,8 @@ module.exports = {
   loginController,
   logoutController,
   generateSecurityCodeController,
-  verifySecurityCodeController,
+  verifyRegisterSecurityCodeController,
   resetPasswordController,
-  getNewAccessTokenController,
-  verifyRegisterSecurityCodeController
+  getNewAccessTokenController
 };
 
