@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { User, UserSecurity } = require('../models'); // Sequelize models
+const { User, UserSecurity, Freelancer, Employer } = require('../models'); // Sequelize models
 const { sendSecurityCodeEmail } = require('../utils/sendMail');
 const bcrypt = require('bcryptjs');
 const {
@@ -21,12 +21,16 @@ const checkStatus = async (req, res) => {
 const registerController = async (req, res) => {
   const user = req.body;
   try {
-    if (!user.email || !user.username || !user.password) {
+    if (!user.email || !user.username || !user.password || !user.role) {
       return res.status(400).json({
         message: 'All fields are required'
       });
     }
-
+    if (user.role !== 'freelancer' && user.role !== 'employer') {
+      return res.status(400).json({
+        message: 'Invalid role'
+      });
+    }
     const existingUser = await User.findOne({ where: { email: user.email.toLowerCase() } });
     if (existingUser) {
       return res.status(400).json({
@@ -40,7 +44,7 @@ const registerController = async (req, res) => {
       email: user.email.toLowerCase(),
       username: user.username,
       password: hashedPassword,
-      role: 'user',  // Default role
+      role: user.role,
       isVerified: false
     });
 
@@ -199,8 +203,19 @@ const verifySecurityCodeController = async (req, res) => {
 
     const security_code = securityRecord.code;
     if (security_code === code) {
+      // Mark the user as verified
+      userRecord.isVerified = true;
+      await userRecord.save();
+
+      // Create freelancer or employer record based on user role
+      if (userRecord.role === 'freelancer') {
+        await Freelancer.create({ user_id: userRecord.id });
+      } else if (userRecord.role === 'employer') {
+        await Employer.create({ user_id: userRecord.id });
+      }
+
       return res.status(200).json({
-        message: 'Security code verified successfully'
+        message: 'Security code verified and user verified successfully'
       });
     } else {
       return res.status(400).json({
@@ -208,12 +223,12 @@ const verifySecurityCodeController = async (req, res) => {
       });
     }
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       message: 'Failed to verify security code'
     });
   }
 }
-
 const resetPasswordController = async (req, res) => {
   const { email, password } = req.body;
   try {
