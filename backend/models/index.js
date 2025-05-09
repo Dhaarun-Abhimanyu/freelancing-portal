@@ -6,6 +6,8 @@ const Contract = require('./Contract');
 const Message = require('./Message');
 const Payment = require('./Payment');
 const Review = require('./Review');
+const User = require('./User');
+const UserSecurity = require('./UserSecurity');
 
 // Associations
 Freelancer.hasMany(Skills, { foreignKey: 'freelancer_id' });
@@ -26,5 +28,5 @@ Payment.belongsTo(Freelancer, { foreignKey: 'freelancer_id' });
 Freelancer.hasMany(Review, { foreignKey: 'freelancer_id' });
 Review.belongsTo(Freelancer, { foreignKey: 'freelancer_id' });
 
-module.exports = { Freelancer, Employer, Skills, Proposal, Contract, Message, Payment, Review };
+module.exports = { Freelancer, Employer, Skills, Proposal, Contract, Message, Payment, Review, User, UserSecurity };
 

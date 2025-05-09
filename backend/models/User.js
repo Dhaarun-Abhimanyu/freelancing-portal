@@ -1,28 +1,40 @@
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = require('../config/database');  // Adjust the path as needed
+const sequelize = require('../config/db');  // Adjust the path if necessary
 
-const UserSecurity = sequelize.define('UserSecurity', {
-  user_id: {
-    type: DataTypes.STRING,  // Assuming the user_id is stored as a string (e.g., MongoDB ObjectId in the User collection)
+const User = sequelize.define('User', {
+  username: {
+    type: DataTypes.STRING,
     allowNull: false,
     unique: true
   },
-  code: {
-    type: DataTypes.STRING,  // This will store the OTP code
-    allowNull: true
+  email: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
+    validate: { isEmail: true }
   },
-  updatedAt: {
-    type: DataTypes.DATE,  // Sequelize will automatically handle the timestamp for this
-    defaultValue: Sequelize.NOW
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  role: {
+    type: DataTypes.ENUM('freelancer', 'employer'),
+    allowNull: false
+  },
+  isVerified: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
   }
 }, {
-  tableName: 'user_security',
-  timestamps: true  // Will automatically handle createdAt and updatedAt fields
+  tableName: 'users',
+  timestamps: true
 });
 
-// Association with User model
-UserSecurity.associate = (models) => {
-  UserSecurity.belongsTo(models.User, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+User.associate = (models) => {
+  User.hasOne(models.UserSecurity, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+  User.hasOne(models.Freelancer, { foreignKey: 'user_id' });
+  User.hasOne(models.Employer, { foreignKey: 'user_id' });
 };
 
-module.exports = UserSecurity;
+module.exports = User;
+
