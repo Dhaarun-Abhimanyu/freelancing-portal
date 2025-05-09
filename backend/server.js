@@ -6,6 +6,8 @@ require('dotenv').config();
 
 const app = express();
 
+const authRoutes = require('./routes/authRoutes');
+
 app.use(cors({
   origin: true, // Allow all origins (equivalent to '*')
   credentials: true, // Allow cookies to be sent with requests
@@ -14,6 +16,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+app.use('/api/auth', authRoutes);
 
 sequelize.sync({ alter: true }).then(() => console.log('Database synced successfully'));
 
