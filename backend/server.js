@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const sequelize = require('./config/db');
 require('dotenv').config();
 
 const app = express();
@@ -13,6 +14,8 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+
+sequelize.sync({ alter: true }).then(() => console.log('Database synced successfully'));
 
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'Test Home Route' });
