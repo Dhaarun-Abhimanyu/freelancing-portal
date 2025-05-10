@@ -1,84 +1,121 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { employerAPI } from '../api/API';
+import './Dashboard.css';
 
 function EmployerDashboard() {
-  const [jobDetails, setJobDetails] = useState({ freelancer_id: '', payment_amount: '', start_date: '', end_date: '' });
-  const [freelancers, setFreelancers] = useState([]);
-  const [message, setMessage] = useState('');
+  const [proposals, setProposals] = useState([]);
+  const [newProposal, setNewProposal] = useState({
+    title: '',
+    description: '',
+    budget: '',
+    deadline: ''
+  });
 
-  const handleProposeJob = async (e) => {
-    e.preventDefault();
-    try {
-      const response = await employerAPI.proposeJob(jobDetails);
-      alert(response.data.message);
-    } catch (error) {
-      alert(error.response?.data?.message || 'Failed to propose job');
-    }
-  };
+  useEffect(() => {
+    fetchProposals();
+  }, []);
 
-  const handleFetchFreelancers = async () => {
+  const fetchProposals = async () => {
     try {
       const response = await employerAPI.fetchFreelancers();
-      setFreelancers(response.data.proposals);
+      setProposals(response.data.proposals);
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to fetch freelancers');
+      console.error('Failed to fetch proposals:', error);
     }
   };
 
-  const handleMessageFreelancer = async (freelancerId) => {
+  const handleSubmitProposal = async (e) => {
+    e.preventDefault();
     try {
-      const response = await employerAPI.messageFreelancer({ freelancer_id: freelancerId, message });
-      alert(response.data.message);
+      await employerAPI.proposeJob({
+        ...newProposal,
+        payment_amount: parseFloat(newProposal.budget),
+        start_date: new Date().toISOString(),
+        end_date: new Date(newProposal.deadline).toISOString()
+      });
+      setNewProposal({ title: '', description: '', budget: '', deadline: '' });
+      fetchProposals();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to send message');
+      console.error('Failed to create proposal:', error);
     }
   };
 
   return (
-    <div>
-      <h1>Employer Dashboard</h1>
-      <form onSubmit={handleProposeJob}>
-        <h2>Propose a Job</h2>
-        <input
-          type="text"
-          placeholder="Freelancer ID"
-          value={jobDetails.freelancer_id}
-          onChange={(e) => setJobDetails({ ...jobDetails, freelancer_id: e.target.value })}
-          required
-        />
-        <input
-          type="number"
-          placeholder="Payment Amount"
-          value={jobDetails.payment_amount}
-          onChange={(e) => setJobDetails({ ...jobDetails, payment_amount: e.target.value })}
-          required
-        />
-        <input
-          type="date"
-          placeholder="Start Date"
-          value={jobDetails.start_date}
-          onChange={(e) => setJobDetails({ ...jobDetails, start_date: e.target.value })}
-          required
-        />
-        <input
-          type="date"
-          placeholder="End Date"
-          value={jobDetails.end_date}
-          onChange={(e) => setJobDetails({ ...jobDetails, end_date: e.target.value })}
-          required
-        />
-        <button type="submit">Propose Job</button>
-      </form>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1>Employer Dashboard</h1>
+      </div>
 
-      <button onClick={handleFetchFreelancers}>Fetch Freelancers</button>
-      <ul>
-        {freelancers.map((freelancer) => (
-          <li key={freelancer.id}>
-            {freelancer.username} - {freelancer.email}
-            <button onClick={() => handleMessageFreelancer(freelancer.id)}>Message</button>
-          </li>
-        ))}
-      </ul>
+      <div className="dashboard-content">
+        <section className="create-proposal-section">
+          <h2>Create New Proposal</h2>
+          <form onSubmit={handleSubmitProposal} className="proposal-form">
+            <div className="form-group">
+              <label>Title</label>
+              <input
+                type="text"
+                value={newProposal.title}
+                onChange={(e) => setNewProposal({ ...newProposal, title: e.target.value })}
+                placeholder="Project Title"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                value={newProposal.description}
+                onChange={(e) => setNewProposal({ ...newProposal, description: e.target.value })}
+                placeholder="Project Description"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Budget ($)</label>
+              <input
+                type="number"
+                value={newProposal.budget}
+                onChange={(e) => setNewProposal({ ...newProposal, budget: e.target.value })}
+                placeholder="Budget"
+                min="1"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Deadline</label>
+              <input
+                type="date"
+                value={newProposal.deadline}
+                onChange={(e) => setNewProposal({ ...newProposal, deadline: e.target.value })}
+                required
+              />
+            </div>
+
+            <button type="submit" className="submit-button">Create Proposal</button>
+          </form>
+        </section>
+
+        <section className="proposals-list-section">
+          <h2>Your Proposals</h2>
+          <div className="proposals-grid">
+            {proposals.map((proposal) => (
+              <div key={proposal.id} className="proposal-card">
+                <h3>{proposal.title}</h3>
+                <p>{proposal.description}</p>
+                <div className="proposal-details">
+                  <span>Budget: ${proposal.payment_amount}</span>
+                  <span>Status: {proposal.status}</span>
+                </div>
+                <div className="proposal-actions">
+                  <button className="view-button">View Applications</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

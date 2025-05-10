@@ -1,98 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { freelancerAPI } from '../api/API';
+import './Dashboard.css';
 
 function FreelancerDashboard() {
-  const [proposalDetails, setProposalDetails] = useState({ employer_id: '', cover_letter: '' });
-  const [contractDetails, setContractDetails] = useState({ contract_id: '', freelancer_id: '' });
-  const [updateDetails, setUpdateDetails] = useState({ contract_id: '', update_message: '' });
+  const [availableProposals, setAvailableProposals] = useState([]);
+  const [myApplications, setMyApplications] = useState([]);
+  const [applicationText, setApplicationText] = useState('');
+  
+  useEffect(() => {
+    fetchAvailableProposals();
+    fetchMyApplications();
+  }, []);
 
-  const handleApplyProposal = async (e) => {
-    e.preventDefault();
+  const fetchAvailableProposals = async () => {
     try {
-      const response = await freelancerAPI.applyProposal(proposalDetails);
-      alert(response.data.message);
+      // This would need to be implemented in the backend
+      const response = await freelancerAPI.getAvailableProposals();
+      setAvailableProposals(response.data.proposals);
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to apply for proposal');
+      console.error('Failed to fetch proposals:', error);
     }
   };
 
-  const handleAcceptContract = async (e) => {
-    e.preventDefault();
+  const fetchMyApplications = async () => {
     try {
-      const response = await freelancerAPI.acceptContract(contractDetails);
-      alert(response.data.message);
+      // This would need to be implemented in the backend
+      const response = await freelancerAPI.getMyApplications();
+      setMyApplications(response.data.applications);
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to accept contract');
+      console.error('Failed to fetch applications:', error);
     }
   };
 
-  const handleSendUpdates = async (e) => {
-    e.preventDefault();
+  const handleApply = async (proposalId) => {
     try {
-      const response = await freelancerAPI.sendUpdates(updateDetails);
-      alert(response.data.message);
+      await freelancerAPI.applyProposal({
+        proposal_id: proposalId,
+        cover_letter: applicationText
+      });
+      setApplicationText('');
+      fetchMyApplications();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to send updates');
+      console.error('Failed to apply:', error);
     }
   };
 
   return (
-    <div>
-      <h1>Freelancer Dashboard</h1>
-      <form onSubmit={handleApplyProposal}>
-        <h2>Apply for a Proposal</h2>
-        <input
-          type="text"
-          placeholder="Employer ID"
-          value={proposalDetails.employer_id}
-          onChange={(e) => setProposalDetails({ ...proposalDetails, employer_id: e.target.value })}
-          required
-        />
-        <textarea
-          placeholder="Cover Letter"
-          value={proposalDetails.cover_letter}
-          onChange={(e) => setProposalDetails({ ...proposalDetails, cover_letter: e.target.value })}
-          required
-        />
-        <button type="submit">Apply</button>
-      </form>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1>Freelancer Dashboard</h1>
+      </div>
 
-      <form onSubmit={handleAcceptContract}>
-        <h2>Accept a Contract</h2>
-        <input
-          type="text"
-          placeholder="Contract ID"
-          value={contractDetails.contract_id}
-          onChange={(e) => setContractDetails({ ...contractDetails, contract_id: e.target.value })}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Freelancer ID"
-          value={contractDetails.freelancer_id}
-          onChange={(e) => setContractDetails({ ...contractDetails, freelancer_id: e.target.value })}
-          required
-        />
-        <button type="submit">Accept Contract</button>
-      </form>
+      <div className="dashboard-content">
+        <section className="available-proposals-section">
+          <h2>Available Projects</h2>
+          <div className="proposals-grid">
+            {availableProposals.map((proposal) => (
+              <div key={proposal.id} className="proposal-card">
+                <h3>{proposal.title}</h3>
+                <p>{proposal.description}</p>
+                <div className="proposal-details">
+                  <span>Budget: ${proposal.budget}</span>
+                  <span>Deadline: {new Date(proposal.deadline).toLocaleDateString()}</span>
+                </div>
+                <div className="application-form">
+                  <textarea
+                    placeholder="Why are you a good fit for this project?"
+                    value={applicationText}
+                    onChange={(e) => setApplicationText(e.target.value)}
+                  />
+                  <button onClick={() => handleApply(proposal.id)} className="apply-button">
+                    Apply
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-      <form onSubmit={handleSendUpdates}>
-        <h2>Send Updates</h2>
-        <input
-          type="text"
-          placeholder="Contract ID"
-          value={updateDetails.contract_id}
-          onChange={(e) => setUpdateDetails({ ...updateDetails, contract_id: e.target.value })}
-          required
-        />
-        <textarea
-          placeholder="Update Message"
-          value={updateDetails.update_message}
-          onChange={(e) => setUpdateDetails({ ...updateDetails, update_message: e.target.value })}
-          required
-        />
-        <button type="submit">Send Update</button>
-      </form>
+        <section className="my-applications-section">
+          <h2>My Applications</h2>
+          <div className="applications-grid">
+            {myApplications.map((application) => (
+              <div key={application.id} className="application-card">
+                <h3>{application.proposal.title}</h3>
+                <p>Status: {application.status}</p>
+                <div className="application-details">
+                  <p>Your Cover Letter:</p>
+                  <p className="cover-letter">{application.cover_letter}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
