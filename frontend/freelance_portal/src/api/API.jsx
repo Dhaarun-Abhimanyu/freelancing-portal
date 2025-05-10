@@ -34,7 +34,7 @@ export const userAPI = {
 
 export const employerAPI = {
   proposeJob: (jobDetails) => API.post('/api/employer/propose-job', jobDetails),
-  fetchFreelancers: (employerId) => API.get(`/api/employer/freelancers`, { params: { employer_id: employerId } }),
+  fetchFreelancers: (employerId) => API.get('/api/employer/freelancers', { params: { employer_id: employerId } }),
   acceptFreelancer: (contractDetails) => API.post('/api/employer/accept-freelancer', contractDetails),
   receiveUpdates: (updateDetails) => API.post('/api/employer/receive-updates', updateDetails),
   messageFreelancer: (messageDetails) => API.post('/api/employer/message-freelancer', messageDetails),

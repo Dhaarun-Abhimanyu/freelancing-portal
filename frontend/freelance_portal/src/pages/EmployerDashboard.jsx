@@ -3,40 +3,51 @@ import { employerAPI } from '../api/API';
 import './Dashboard.css';
 
 function EmployerDashboard() {
-  const [proposals, setProposals] = useState([]);
-  const [newProposal, setNewProposal] = useState({
-    title: '',
-    description: '',
-    budget: '',
-    deadline: ''
+  const [jobDetails, setJobDetails] = useState({
+    freelancer_id: '',
+    payment_amount: '',
+    start_date: '',
+    end_date: ''
+  });
+  const [freelancers, setFreelancers] = useState([]);
+  const [messageDetails, setMessageDetails] = useState({
+    freelancer_id: '',
+    message_text: ''
   });
 
   useEffect(() => {
-    fetchProposals();
+    fetchFreelancers();
   }, []);
 
-  const fetchProposals = async () => {
+  const fetchFreelancers = async () => {
     try {
       const response = await employerAPI.fetchFreelancers();
-      setProposals(response.data.proposals);
+      setFreelancers(response.data.proposals || []);
     } catch (error) {
-      console.error('Failed to fetch proposals:', error);
+      console.error('Failed to fetch freelancers:', error);
     }
   };
 
-  const handleSubmitProposal = async (e) => {
+  const handleProposeJob = async (e) => {
     e.preventDefault();
     try {
-      await employerAPI.proposeJob({
-        ...newProposal,
-        payment_amount: parseFloat(newProposal.budget),
-        start_date: new Date().toISOString(),
-        end_date: new Date(newProposal.deadline).toISOString()
-      });
-      setNewProposal({ title: '', description: '', budget: '', deadline: '' });
-      fetchProposals();
+      const response = await employerAPI.proposeJob(jobDetails);
+      alert(response.data.message);
+      setJobDetails({ freelancer_id: '', payment_amount: '', start_date: '', end_date: '' });
+      fetchFreelancers();
     } catch (error) {
-      console.error('Failed to create proposal:', error);
+      alert(error.response?.data?.message || 'Failed to propose job');
+    }
+  };
+
+  const handleMessageFreelancer = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await employerAPI.messageFreelancer(messageDetails);
+      alert(response.data.message);
+      setMessageDetails({ freelancer_id: '', message_text: '' });
+    } catch (error) {
+      alert(error.response?.data?.message || 'Failed to send message');
     }
   };
 
@@ -47,73 +58,91 @@ function EmployerDashboard() {
       </div>
 
       <div className="dashboard-content">
-        <section className="create-proposal-section">
-          <h2>Create New Proposal</h2>
-          <form onSubmit={handleSubmitProposal} className="proposal-form">
+        <section className="job-proposal-section">
+          <h2>Create Job Proposal</h2>
+          <form onSubmit={handleProposeJob} className="proposal-form">
             <div className="form-group">
-              <label>Title</label>
+              <label>Freelancer ID</label>
               <input
                 type="text"
-                value={newProposal.title}
-                onChange={(e) => setNewProposal({ ...newProposal, title: e.target.value })}
-                placeholder="Project Title"
+                value={jobDetails.freelancer_id}
+                onChange={(e) => setJobDetails({ ...jobDetails, freelancer_id: e.target.value })}
+                placeholder="Enter freelancer ID"
                 required
               />
             </div>
-
             <div className="form-group">
-              <label>Description</label>
-              <textarea
-                value={newProposal.description}
-                onChange={(e) => setNewProposal({ ...newProposal, description: e.target.value })}
-                placeholder="Project Description"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Budget ($)</label>
+              <label>Payment Amount ($)</label>
               <input
                 type="number"
-                value={newProposal.budget}
-                onChange={(e) => setNewProposal({ ...newProposal, budget: e.target.value })}
-                placeholder="Budget"
+                value={jobDetails.payment_amount}
+                onChange={(e) => setJobDetails({ ...jobDetails, payment_amount: e.target.value })}
+                placeholder="Enter payment amount"
                 min="1"
                 required
               />
             </div>
-
             <div className="form-group">
-              <label>Deadline</label>
+              <label>Start Date</label>
               <input
                 type="date"
-                value={newProposal.deadline}
-                onChange={(e) => setNewProposal({ ...newProposal, deadline: e.target.value })}
+                value={jobDetails.start_date}
+                onChange={(e) => setJobDetails({ ...jobDetails, start_date: e.target.value })}
                 required
               />
             </div>
-
+            <div className="form-group">
+              <label>End Date</label>
+              <input
+                type="date"
+                value={jobDetails.end_date}
+                onChange={(e) => setJobDetails({ ...jobDetails, end_date: e.target.value })}
+                required
+              />
+            </div>
             <button type="submit" className="submit-button">Create Proposal</button>
           </form>
         </section>
 
-        <section className="proposals-list-section">
-          <h2>Your Proposals</h2>
+        <section className="freelancers-section">
+          <h2>Available Freelancers</h2>
           <div className="proposals-grid">
-            {proposals.map((proposal) => (
-              <div key={proposal.id} className="proposal-card">
-                <h3>{proposal.title}</h3>
-                <p>{proposal.description}</p>
+            {freelancers.map((freelancer) => (
+              <div key={freelancer.proposal_id} className="proposal-card">
+                <h3>{freelancer.cover_letter}</h3>
                 <div className="proposal-details">
-                  <span>Budget: ${proposal.payment_amount}</span>
-                  <span>Status: {proposal.status}</span>
-                </div>
-                <div className="proposal-actions">
-                  <button className="view-button">View Applications</button>
+                  <span>Status: {freelancer.status}</span>
+                  <span>Applied: {new Date(freelancer.applied_date).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
           </div>
+        </section>
+
+        <section className="message-section">
+          <h2>Message Freelancer</h2>
+          <form onSubmit={handleMessageFreelancer} className="proposal-form">
+            <div className="form-group">
+              <label>Freelancer ID</label>
+              <input
+                type="text"
+                value={messageDetails.freelancer_id}
+                onChange={(e) => setMessageDetails({ ...messageDetails, freelancer_id: e.target.value })}
+                placeholder="Enter freelancer ID"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Message</label>
+              <textarea
+                value={messageDetails.message_text}
+                onChange={(e) => setMessageDetails({ ...messageDetails, message_text: e.target.value })}
+                placeholder="Write your message"
+                required
+              />
+            </div>
+            <button type="submit" className="submit-button">Send Message</button>
+          </form>
         </section>
       </div>
     </div>
