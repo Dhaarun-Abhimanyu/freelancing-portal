@@ -7,17 +7,22 @@ require('dotenv').config();
 const app = express();
 
 const authRoutes = require('./routes/authRoutes');
+const employerRoutes = require('./routes/employerRoutes');
+const freelancerRoutes = require('./routes/freelancerRoutes');
 
 app.use(cors({
-  origin: true, // Allow all origins (equivalent to '*')
-  credentials: true, // Allow cookies to be sent with requests
+  origin: true, 
+  credentials: true, 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
+
 app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/employer', employerRoutes);
+app.use('/api/freelancer', freelancerRoutes);
 
 sequelize.sync({ alter: true }).then(() => console.log('Database synced successfully'));
 
@@ -28,3 +33,4 @@ app.get('/', (req, res) => {
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server is running on http://localhost:${process.env.PORT || 5000}`);
 });
+
