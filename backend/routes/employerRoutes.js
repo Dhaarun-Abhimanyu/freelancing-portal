@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const employeeControler = require('../controllers/employeeControler');
+const { authMiddleware } = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -177,3 +178,4 @@ router.post('/receive-updates', employeeControler.receiveUpdates);
 router.post('/message-freelancer', employeeControler.messageFreelancer);
 
 module.exports = router;
+

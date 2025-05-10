@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await logout();
-    alert('Logged out successfully!');
-  };
+  useEffect(() => {
+    if (user?.role === 'employer') {
+      navigate('/employer-dashboard');
+    } else if (user?.role === 'freelancer') {
+      navigate('/freelancer-dashboard');
+    } else {
+      navigate('/login'); // Redirect to login if no valid role is found
+    }
+  }, [user, navigate]);
 
-  return (
-    <div style={{ textAlign: 'center', padding: '2rem' }}>
-      <h1>Welcome, {user?.username || 'User'}!</h1>
-      <p>You are logged in as a {user?.role}.</p>
-      <button onClick={handleLogout}>Logout</button>
-    </div>
-  );
+  return null; // No UI is needed here since it redirects immediately
 }
 
 export default Dashboard;

@@ -5,6 +5,8 @@ import LandingPage from './pages/LandingPage';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import EmployerDashboard from './pages/EmployerDashboard';
+import FreelancerDashboard from './pages/FreelancerDashboard';
 
 function App() {
   return (
@@ -15,6 +17,8 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/employer-dashboard" element={<EmployerDashboard />} />
+          <Route path="/freelancer-dashboard" element={<FreelancerDashboard />} />
         </Routes>
       </Router>
     </AuthProvider>
