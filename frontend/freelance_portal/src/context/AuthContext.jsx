@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await userAPI.login(credentials);
       setIsAuthenticated(true);
-      setUser(response.data.user);
+      setUser(response.data.user); // Ensure the user object includes the role
       return { success: true };
     } catch (error) {
       return { success: false, message: error.response?.data?.message };

@@ -17,10 +17,37 @@ const ONE_HOUR = 60 * 60 * 1000;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
 const checkStatus = async (req, res) => {
-  return res.status(200).json({
-    message: "The token is still valid"
-  });
-}
+  try {
+    const userId = req.user_id;
+    let record = await Freelancer.findOne({ where: { freelancer_id: userId } });
+    let role = null;
+
+    if (record) {
+      role = 'freelancer';
+    } else {
+      record = await Employer.findOne({ where: { employer_id: userId } });
+      if (record) {
+        role = 'employer';
+      }
+    }
+
+    if (!record) {
+      return res.status(404).json({
+        message: 'User not found',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'The token is still valid',
+      user: { ...record.toJSON(), role }, // Include the inferred role in the response
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      message: 'Failed to check status',
+    });
+  }
+};
 
 const registerController = async (req, res) => {
   const { email, username, password, role } = req.body;
@@ -91,27 +118,33 @@ const loginController = async (req, res) => {
   const lowerEmail = email.toLowerCase();
   try {
     let record = await Freelancer.findOne({ where: { email: lowerEmail } });
-    let role = 'freelancer';
-    if (!record) {
+    let role = null;
+
+    if (record) {
+      role = 'freelancer';
+    } else {
       record = await Employer.findOne({ where: { email: lowerEmail } });
-      role = 'employer';
+      if (record) {
+        role = 'employer';
+      }
     }
+
     if (!record) {
       return res.status(404).json({
-        message: 'User not found'
+        message: 'User not found',
       });
     }
 
     const isPasswordValid = await bcrypt.compare(password, record.password);
     if (!isPasswordValid) {
       return res.status(401).json({
-        message: 'Invalid password'
+        message: 'Invalid password',
       });
     }
 
     if (!record.isVerified) {
       return res.status(401).json({
-        message: 'User not verified'
+        message: 'User not verified',
       });
     }
 
@@ -121,25 +154,25 @@ const loginController = async (req, res) => {
     res.cookie('accesstoken', accesstoken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'none',
     });
     res.cookie('refreshtoken', refreshtoken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'none',
     });
 
     return res.status(201).json({
       message: 'User logged in successfully',
-      user: record
+      user: { ...record.toJSON(), role }, // Include the inferred role in the response
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      message: 'Failed login'
+      message: 'Failed login',
     });
   }
-}
+};
 
 const logoutController = async (req, res) => {
   try {
@@ -207,17 +240,30 @@ const verifyRegisterSecurityCodeController = async (req, res) => {
   const lowerEmail = email.toLowerCase();
   try {
     let record = await Freelancer.findOne({ where: { email: lowerEmail } });
-    if (!record) record = await Employer.findOne({ where: { email: lowerEmail } });
+    let role = null;
+
+    if (record) {
+      role = 'freelancer';
+    } else {
+      record = await Employer.findOne({ where: { email: lowerEmail } });
+      if (record) {
+        role = 'employer';
+      }
+    }
+
     if (!record) {
       return res.status(404).json({
-        message: "User not found"
+        message: 'User not found',
       });
     }
 
-    const securityRecord = await UserSecurity.findOne({ where: { user_id: String(record.freelancer_id || record.employer_id) } });
+    const securityRecord = await UserSecurity.findOne({
+      where: { user_id: String(record.freelancer_id || record.employer_id) },
+    });
+
     if (!securityRecord) {
       return res.status(404).json({
-        message: "Security code not found"
+        message: 'Security code not found',
       });
     }
 
@@ -225,16 +271,15 @@ const verifyRegisterSecurityCodeController = async (req, res) => {
     const THEN = securityRecord.updatedAt.getTime();
     if (NOW - THEN > ONE_HOUR) {
       return res.status(400).json({
-        message: 'Security code expired'
+        message: 'Security code expired',
       });
     }
 
     if (securityRecord.code !== code) {
       return res.status(400).json({
-        message: "Invalid security code"
+        message: 'Invalid security code',
       });
     }
-
 
     record.isVerified = true;
     await record.save();
@@ -245,24 +290,25 @@ const verifyRegisterSecurityCodeController = async (req, res) => {
     res.cookie('accesstoken', accesstoken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'none',
     });
     res.cookie('refreshtoken', refreshtoken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none'
+      sameSite: 'none',
     });
 
     return res.status(200).json({
-      message: 'User verified and signed in successfully'
+      message: 'User verified and signed in successfully',
+      user: { ...record.toJSON(), role }, // Include the inferred role in the response
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      message: 'Failed to verify security code for sign up'
+      message: 'Failed to verify security code for sign up',
     });
   }
-}
+};
 
 const resetPasswordController = async (req, res) => {
   const { email, password } = req.body;

@@ -32,4 +32,19 @@ export const userAPI = {
   refreshAccessToken: () => API.post('/api/auth/refresh-token'),
 };
 
+export const employerAPI = {
+  proposeJob: (jobDetails) => API.post('/api/employer/propose-job', jobDetails),
+  fetchFreelancers: (employerId) => API.get(`/api/employer/freelancers`, { params: { employer_id: employerId } }),
+  acceptFreelancer: (contractDetails) => API.post('/api/employer/accept-freelancer', contractDetails),
+  receiveUpdates: (updateDetails) => API.post('/api/employer/receive-updates', updateDetails),
+  messageFreelancer: (messageDetails) => API.post('/api/employer/message-freelancer', messageDetails),
+};
+
+export const freelancerAPI = {
+  applyProposal: (proposalDetails) => API.post('/api/freelancer/apply-proposal', proposalDetails),
+  acceptContract: (contractDetails) => API.post('/api/freelancer/accept-contract', contractDetails),
+  sendUpdates: (updateDetails) => API.post('/api/freelancer/send-updates', updateDetails),
+  messageEmployer: (messageDetails) => API.post('/api/freelancer/message-employer', messageDetails),
+};
+
 export default API;
