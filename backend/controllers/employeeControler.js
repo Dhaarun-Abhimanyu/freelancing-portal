@@ -24,7 +24,6 @@ module.exports = {
     fetchFreelancers: async (req, res) => {
         try {
             const { employer_id } = req.body;
-            // Find proposals for this employer
             const proposals = await Proposal.findAll({
                 where: { employer_id }
             });
