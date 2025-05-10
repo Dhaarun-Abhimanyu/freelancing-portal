@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-const { 
-    Freelancer, 
-    Employer, 
-    UserSecurity 
-} = require('../models'); 
+const {
+  Freelancer,
+  Employer,
+  UserSecurity
+} = require('../models');
 const { sendSecurityCodeEmail } = require('../utils/sendMail');
 const bcrypt = require('bcryptjs');
 const {
@@ -68,7 +68,7 @@ const registerController = async (req, res) => {
 
     const code = generateSecurityCode();
     await UserSecurity.create({
-      user_id: newRecord.id,
+      user_id: newRecord.freelancer_id || newRecord.employer_id,
       code: code,
       updatedAt: new Date()
     });
@@ -115,8 +115,8 @@ const loginController = async (req, res) => {
       });
     }
 
-    const accesstoken = generateAccessToken(record.id);
-    const refreshtoken = generateRefreshToken(record.id);
+    const accesstoken = generateAccessToken(record.freelancer_id || record.employer_id);
+    const refreshtoken = generateRefreshToken(record.freelancer_id || record.employer_id);
 
     res.cookie('accesstoken', accesstoken, {
       httpOnly: true,
@@ -214,7 +214,7 @@ const verifyRegisterSecurityCodeController = async (req, res) => {
       });
     }
 
-    const securityRecord = await UserSecurity.findOne({ where: { user_id: record.id } });
+    const securityRecord = await UserSecurity.findOne({ where: { user_id: String(record.freelancer_id || record.employer_id) } });
     if (!securityRecord) {
       return res.status(404).json({
         message: "Security code not found"
@@ -239,8 +239,8 @@ const verifyRegisterSecurityCodeController = async (req, res) => {
     record.isVerified = true;
     await record.save();
 
-    const accesstoken = generateAccessToken(record.id);
-    const refreshtoken = generateRefreshToken(record.id);
+    const accesstoken = generateAccessToken(record.freelancer_id || record.employer_id);
+    const refreshtoken = generateRefreshToken(record.freelancer_id || record.employer_id);
 
     res.cookie('accesstoken', accesstoken, {
       httpOnly: true,

@@ -8,7 +8,7 @@ router.post('/register', authController.registerController);
 router.post('/login', authController.loginController);
 router.post('/logout', authController.logoutController);
 router.post('/generate-security-code', authController.generateSecurityCodeController);
-router.post('/verify-security-code', authController.verifySecurityCodeController);
+router.post('/verify-security-code', authController.verifyRegisterSecurityCodeController);
 router.post('/reset-password', authController.resetPasswordController);
 router.post('/refresh-token', authController.getNewAccessTokenController);
 router.post('/verify-register-code', authController.verifyRegisterSecurityCodeController);
