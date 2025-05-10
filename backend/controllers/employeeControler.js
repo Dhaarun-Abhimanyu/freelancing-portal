@@ -21,20 +21,19 @@ module.exports = {
     }
   },
 
-  fetchFreelancers: async (req, res) => {
-    try {
-      console.log(req.body);
-      const { id } = req.body;
-      // Find proposals for this employer
-      const proposals = await Proposal.findAll({
-        where: { id }
-      });
-      res.status(200).json({ message: 'Freelancers fetched', proposals });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Error fetching freelancers', error: error.message });
-    }
-  },
+
+    fetchFreelancers: async (req, res) => {
+        try {
+            const { employer_id } = req.body;
+            const proposals = await Proposal.findAll({
+                where: { employer_id }
+            });
+            res.status(200).json({ message: 'Freelancers fetched', proposals });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Error fetching freelancers', error: error.message });
+        }
+    },
 
   acceptFreelancer: async (req, res) => {
     try {
